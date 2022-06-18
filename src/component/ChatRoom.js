@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import {over} from "stompjs"
 import SockJs from "sockjs-client"
 
@@ -11,23 +11,28 @@ const ChatRoom = () => {
 
     const [userData, setUserData] = useState({
         username: "",
-        recivername: "",
+        receivername: "",
         connected: false,
         message: ""
     })
+    useEffect(() => {
+        console.log(userData)
+    }, [userData])
 
-    const handleValue = (event) => {
-        const {value, name} = event.target
-        setUserData({
-            ...userData, 
-            [name]: value
-        })
+    const handleUsername=(event)=>{
+        const {value}=event.target;
+        setUserData({...userData,"username": value});
+    }
+
+    const handleMessage =(event)=>{
+        const {value}=event.target;
+        setUserData({...userData,"message": value});
     }
 
     const registerUser = () => {
-        let sock = new SockJs("http://localhost:8080/ws")
-        stompClient = over(sock)
-        stompClient.connected({}, onConnected, onError)
+        let Sock = new SockJs("http://localhost:8080/ws")
+        stompClient = over(Sock)
+        stompClient.connect({}, onConnected, onError)
     }
 
     const onConnected = () => {
@@ -66,11 +71,14 @@ const ChatRoom = () => {
                 setPublicChats([...publicChats])
                 break;
 
+            default:
+                break;
         }
     }
 
     const onPrivateMessageReceived = (payload) => {
-        let payloadData = JSON.parse(payload)
+        console.log(payload)
+        let payloadData = JSON.parse(payload.body)
 
         if (privateChats.get(payloadData.senderName)) {
             privateChats.get(payloadData.senderName).push(payloadData)
@@ -102,13 +110,13 @@ const ChatRoom = () => {
         if (stompClient){
             let chatMessage = {
                 senderName: userData.username,
-                reveivername: tab,
+                receiverName: tab,
                 message: userData.message,
                 status: "MESSAGE"
             }
 
             if (userData.username !== tab){
-                privateChats.set(tab).push(chatMessage)
+                privateChats.get(tab).push(chatMessage)
                 setPrivateChats(new Map(privateChats))
             }
 
@@ -122,7 +130,7 @@ const ChatRoom = () => {
 
 
     const onError = (err) => {
-        console.log(err);
+        console.log(err)
     }
 
 
@@ -137,9 +145,9 @@ const ChatRoom = () => {
                                 <li 
                                     onClick={ () => {setTab("CHATROOM")} }
                                     className={`member ${tab === "CHATROOM" && "active"}`}>
-                                        ChatRoom
+                                        Chatroom
                                 </li>
-                                {[...privateChats.keys()].map((name ,index) => (
+                                {[...privateChats.keys()].map((name,index) => (
                                     <li 
                                         onClick={ () => {setTab(name)}} 
                                         className={`member ${tab === name && "active"}`} key={index}>
@@ -149,15 +157,15 @@ const ChatRoom = () => {
                             </ul>
                         </div>
 
-                        {tab == "CHATROOM" && <div className="chat-content">
+                        {tab === "CHATROOM" && <div className="chat-content">
                             <ul className="chat-messages">
                             {publicChats.map((chat, index) => (
-                                <li className="message" key={index}>
+                                <li className={`message ${chat.senderName === userData.username && "self"}`} key={index}>
                                     {chat.senderName !== userData.username &&
                                         <div className="avatar">{chat.senderName}</div>
                                     }
                                     <div className="message-data">{chat.message}</div>
-                                    {chat.senderName !== userData.username &&
+                                    {chat.senderName === userData.username &&
                                         <div className="avatar self">{chat.senderName}</div>
                                     }
                                 </li>
@@ -168,9 +176,10 @@ const ChatRoom = () => {
                                 <input 
                                     type="text" 
                                     className="input-message" 
+                                    name="message" 
                                     placeholder="Digite uma mensagem pública" 
                                     value={userData.message} 
-                                    onChange={handleValue}/>
+                                    onChange={handleMessage}/>
                                 <button type="button" className="send-button" onClick={sendPublicMessage}>Enviar</button>
                             </div>
 
@@ -179,12 +188,12 @@ const ChatRoom = () => {
                         {tab !== "CHATROOM" && <div className="chat-content">
                             <ul className="chat-messages">
                             {[...privateChats.get(tab)].map((chat, index) => (
-                                <li className="message" key={index}>
+                                <li className={`message ${chat.senderName === userData.username && "self"}`} key={index}>
                                     {chat.senderName !== userData.username &&
                                         <div className="avatar">{chat.senderName}</div>
                                     }
                                     <div className="message-data">{chat.message}</div>
-                                    {chat.senderName !== userData.username &&
+                                    {chat.senderName === userData.username &&
                                         <div className="avatar self">{chat.senderName}</div>
                                     }
                                 </li>
@@ -194,10 +203,11 @@ const ChatRoom = () => {
                             <div className="send-message">
                                 <input 
                                     type="text" 
-                                    className="input-message" 
+                                    className="input-message"
+                                    name="message"
                                     placeholder={`Digite uma mensagem privada para ${tab}`}
                                     value={userData.message} 
-                                    onChange={handleValue}/>
+                                    onChange={handleMessage}/>
                                 <button type="button" className="send-button" onClick={sendPrivateMessage}>Enviar</button>
                             </div>
 
@@ -208,13 +218,13 @@ const ChatRoom = () => {
 
                         <input 
                             id="user-name"
+                            name="username"
                             placeholder="Insira o nome do usuário"
                             value={userData.username}
-                            onChange={handleValue}
+                            onChange={handleUsername}
                         />
-
                         <button type="button" onClick={registerUser}>
-                            connect
+                            conectar
                         </button>
 
                       </div>
